@@ -4,7 +4,7 @@ Nextjs quickstart for to generating and editing images with Google Gemini 2.0 Fl
 
 Get your `GEMINI_API_KEY` key [here](https://ai.google.dev/gemini-api/docs/api-key) and start building. 
 
-[![Watch the video](https://raw.githubusercontent.com/google-gemini/gemini-image-editing-nextjs-quickstart/main/assets/thumbnail.png)](https://raw.githubusercontent.com/google-gemini/gemini-image-editing-nextjs-quickstart/main/assets/demo.mov)
+![demo](https://raw.githubusercontent.com/google-gemini/gemini-image-editing-nextjs-quickstart/main/assets/demo.mov)
 
 **How It Works:**
 
