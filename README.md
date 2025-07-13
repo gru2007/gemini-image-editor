@@ -1,41 +1,109 @@
-# Gemini 2.0 Flash Image Generation and Editing
+# Gemini Image Editor - Интеграция с ChatAll.ru
 
-Nextjs quickstart for to generating and editing images with Google Gemini 2.0 Flash. It allows users to generate images from text prompts or edit existing images through natural language instructions, maintaining conversation context for iterative refinements. Try out the hosted demo at [Hugging Face Spaces](https://huggingface.co/spaces/philschmid/image-generation-editing).
+Современный веб-интерфейс для редактирования изображений с помощью Google Gemini 2.0 Flash, интегрированный с системой биллинга Laravel backend.
 
-https://github.com/user-attachments/assets/8ffa5ee3-1b06-46a9-8b5e-761edb0e00c3
+## Основные возможности
 
-Get your `GEMINI_API_KEY` key [here](https://ai.google.dev/gemini-api/docs/api-key) and start building.
+- **Редактирование изображений с ИИ**: Используйте Gemini 2.0 Flash для мгновенного редактирования изображений
+- **Интеграция с биллингом**: Автоматическое списание средств с баланса пользователя
+- **Авторизация пользователей**: Проверка токенов через Laravel backend
+- **Современный дизайн**: Адаптивный интерфейс с поддержкой темной/светлой темы
+- **История изменений**: Сохранение и возврат к предыдущим версиям редактирования
 
-**How It Works:**
+## Как это работает
 
-1. **Create Images**: Generate images from text prompts using Gemini 2.0 Flash
-2. **Edit Images**: Upload an image and provide instructions to modify it
-3. **Conversation History**: Maintain context through a conversation with the AI for iterative refinements
-4. **Download Results**: Save your generated or edited images
+1. **Авторизация**: Пользователь вводит токен от основного сайта
+2. **Загрузка изображения**: Поддержка drag & drop, форматы PNG, JPG, WEBP
+3. **Редактирование**: Описание изменений на русском языке
+4. **Биллинг**: Автоматическое списание средств с баланса
+5. **Результат**: Мгновенная обработка и возможность скачивания
 
-## Basic request
+## Архитектура
 
-For developers who want to call the Gemini API directly, you can use the Google Generative AI JavaScript SDK:
+- **Frontend**: Next.js с Tailwind CSS
+- **Backend**: Laravel (ai-processor) с системой управления балансом
+- **ИИ**: Google Gemini 2.0 Flash API
+- **Авторизация**: JWT токены через Laravel backend
 
-```javascript
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const fs = require("fs");
+## Установка и настройка
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+### 1. Клонирование репозитория
+```bash
+git clone <repository-url>
+cd gemini-image-editor
+```
 
-async function generateImage() {
-  const contents =
-    "Hi, can you create a 3d rendered image of a pig " +
-    "with wings and a top hat flying over a happy " +
-    "futuristic scifi city with lots of greenery?";
+### 2. Установка зависимостей
+```bash
+npm install
+```
 
-  // Set responseModalities to include "Image" so the model can generate
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-exp",
-    generationConfig: {
-      responseModalities: ["Text", "Image"]
-    }
-  });
+### 3. Настройка переменных окружения
+Создайте файл `.env.local` в корне проекта:
+
+```env
+# Gemini API Key для генерации изображений
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Конфигурация Laravel Backend
+LARAVEL_API_URL=http://localhost:8000
+BOT_TOKEN=your_bot_token_here
+
+# Конфигурация Next.js
+NEXTAUTH_URL=http://localhost:3000
+
+# Настройки Gemini Editor
+GEMINI_EDITOR_COST=10
+```
+
+### 4. Запуск проекта
+```bash
+npm run dev
+```
+
+## Использование
+
+### Основной интерфейс
+Откройте [http://localhost:3000/gemini-editor](http://localhost:3000/gemini-editor) в браузере.
+
+### API Endpoints
+
+#### Авторизация пользователя
+```
+GET /api/auth/user
+Headers: Authorization: Bearer <token>
+```
+
+#### Редактирование изображения
+```
+POST /api/gemini-editor/edit
+Headers: Authorization: Bearer <token>
+Body: {
+  "prompt": "Удали фон с изображения",
+  "image_url": "data:image/jpeg;base64,...",
+  "style": "natural",
+  "strength": "moderate"
+}
+```
+
+#### Списание баланса
+```
+POST /api/balance/deduct
+Body: {
+  "user_id": 123,
+  "amount": 10,
+  "description": "Gemini Image Editor usage"
+}
+```
+
+## Интеграция с Laravel Backend
+
+Проект интегрирован с существующим Laravel backend (ai-processor), который предоставляет:
+
+- Управление балансом пользователей
+- Авторизацию через JWT токены
+- API для обработки изображений
+- Систему биллинга
 
   try {
     const response = await model.generateContent(contents);
