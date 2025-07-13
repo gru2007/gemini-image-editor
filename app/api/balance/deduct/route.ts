@@ -38,9 +38,39 @@ export async function POST(req: NextRequest) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      console.error(`Laravel API returned ${response.status}: ${response.statusText}`);
+      
+      // Try to parse response as JSON, but handle HTML responses gracefully
+      let errorMessage = "Failed to deduct balance";
+      let errorData = null;
+      
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          console.error("Failed to parse JSON error response:", parseError);
+        }
+      } else {
+        // Handle HTML error responses
+        const textResponse = await response.text();
+        console.error("Received HTML error response:", textResponse.substring(0, 200));
+        
+        // Provide specific error messages based on status
+        if (response.status === 401) {
+          errorMessage = "Invalid or expired bot token";
+        } else if (response.status === 404) {
+          errorMessage = "Balance endpoint not found. Please check Laravel API configuration.";
+        } else if (response.status === 500) {
+          errorMessage = "Laravel backend server error. Please try again later.";
+        } else if (response.status === 503) {
+          errorMessage = "Laravel backend service unavailable. Please try again later.";
+        }
+      }
+      
       return NextResponse.json(
-        { error: errorData.message || "Failed to deduct balance" },
+        { error: errorMessage },
         { status: response.status }
       );
     }
@@ -52,6 +82,15 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error deducting balance:", error);
+    
+    // Handle network errors
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      return NextResponse.json(
+        { error: "Unable to connect to Laravel backend. Please check if the server is running." },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

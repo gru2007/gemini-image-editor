@@ -13,11 +13,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check if Laravel API URL is configured
-    if (!LARAVEL_API_URL || LARAVEL_API_URL === "http://localhost:8000") {
-      console.warn("LARAVEL_API_URL not configured or using default localhost URL");
-    }
-
     // Forward the request to Laravel backend
     const response = await fetch(`${LARAVEL_API_URL}/api/v1/user`, {
       method: "GET",
@@ -29,22 +24,34 @@ export async function GET(req: NextRequest) {
     });
 
     if (!response.ok) {
-      // Try to parse error response as JSON, fallback to text if it's HTML
+      console.error(`Laravel API returned ${response.status}: ${response.statusText}`);
+      
+      // Try to parse response as JSON, but handle HTML responses gracefully
       let errorMessage = "Failed to authenticate user";
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-      } catch {
-        // If JSON parsing fails, it might be HTML (like a 404 page)
-        const errorText = await response.text();
-        console.error("Non-JSON error response:", errorText.substring(0, 200));
+      let errorData = null;
+      
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          console.error("Failed to parse JSON error response:", parseError);
+        }
+      } else {
+        // Handle HTML error responses
+        const textResponse = await response.text();
+        console.error("Received HTML error response:", textResponse.substring(0, 200));
         
-        if (response.status === 404) {
-          errorMessage = "Laravel API endpoint not found. Please check if the backend is running and LARAVEL_API_URL is correct.";
-        } else if (response.status === 0 || response.status >= 500) {
-          errorMessage = "Cannot connect to Laravel backend. Please check if the server is running and LARAVEL_API_URL is correct.";
-        } else {
-          errorMessage = `Authentication failed (${response.status}): ${response.statusText}`;
+        // Provide specific error messages based on status
+        if (response.status === 401) {
+          errorMessage = "Invalid or expired authentication token";
+        } else if (response.status === 404) {
+          errorMessage = "Authentication endpoint not found. Please check Laravel API configuration.";
+        } else if (response.status === 500) {
+          errorMessage = "Laravel backend server error. Please try again later.";
+        } else if (response.status === 503) {
+          errorMessage = "Laravel backend service unavailable. Please try again later.";
         }
       }
       
@@ -59,10 +66,10 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error authenticating user:", error);
     
-    // Check if it's a network error
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    // Handle network errors
+    if (error instanceof TypeError && error.message.includes("fetch")) {
       return NextResponse.json(
-        { error: "Cannot connect to Laravel backend. Please check if the server is running and LARAVEL_API_URL is configured correctly." },
+        { error: "Unable to connect to Laravel backend. Please check if the server is running." },
         { status: 503 }
       );
     }
