@@ -635,7 +635,7 @@ export default function GeminiEditor() {
                 Мгновенная обработка
               </h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Результат мгновенно - без ожидания и polling'а, используя Gemini 2.0 Flash
+                Результат мгновенно - без ожидания и polling&apos;а, используя Gemini 2.0 Flash
               </p>
             </CardContent>
           </Card>
