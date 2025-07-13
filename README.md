@@ -5,25 +5,23 @@
 ## Основные возможности
 
 - **Редактирование изображений с ИИ**: Используйте Gemini 2.0 Flash для мгновенного редактирования изображений
-- **Интеграция с биллингом**: Автоматическое списание средств с баланса пользователя
-- **Авторизация пользователей**: Проверка токенов через Laravel backend
+- **Простота использования**: Никаких сложных настроек - только Gemini API ключ
+- **Поддержка русского языка**: Описывайте изменения простыми словами на русском
 - **Современный дизайн**: Адаптивный интерфейс с поддержкой темной/светлой темы
 - **История изменений**: Сохранение и возврат к предыдущим версиям редактирования
 
 ## Как это работает
 
-1. **Авторизация**: Пользователь вводит токен от основного сайта
-2. **Загрузка изображения**: Поддержка drag & drop, форматы PNG, JPG, WEBP
-3. **Редактирование**: Описание изменений на русском языке
-4. **Биллинг**: Автоматическое списание средств с баланса
-5. **Результат**: Мгновенная обработка и возможность скачивания
+1. **Загрузка изображения**: Поддержка drag & drop, форматы PNG, JPG, WEBP
+2. **Редактирование**: Описание изменений на русском языке с дополнительными настройками стиля
+3. **Обработка**: Мгновенная обработка через Gemini 2.0 Flash API
+4. **Результат**: Скачивание обработанного изображения
 
 ## Архитектура
 
-- **Frontend**: Next.js с Tailwind CSS
-- **Backend**: Laravel (ai-processor) с системой управления балансом
+- **Frontend**: Next.js с Tailwind CSS и shadcn/ui
 - **ИИ**: Google Gemini 2.0 Flash API
-- **Авторизация**: JWT токены через Laravel backend
+- **Стили**: Современный дизайн в стиле популярных чат-сервисов
 
 ## Установка и настройка
 
@@ -44,17 +42,9 @@ npm install
 ```env
 # Gemini API Key для генерации изображений
 GEMINI_API_KEY=your_gemini_api_key_here
-
-# Конфигурация Laravel Backend
-LARAVEL_API_URL=http://localhost:8000
-BOT_TOKEN=your_bot_token_here
-
-# Конфигурация Next.js
-NEXTAUTH_URL=http://localhost:3000
-
-# Настройки Gemini Editor
-GEMINI_EDITOR_COST=10
 ```
+
+Получите API ключ: https://ai.google.dev/gemini-api/docs/api-key
 
 ### 4. Запуск проекта
 ```bash
@@ -64,46 +54,27 @@ npm run dev
 ## Использование
 
 ### Основной интерфейс
-Откройте [http://localhost:3000/gemini-editor](http://localhost:3000/gemini-editor) в браузере.
+Откройте [http://localhost:3000](http://localhost:3000) в браузере.
 
 ### API Endpoints
 
-#### Авторизация пользователя
-```
-GET /api/auth/user
-Headers: Authorization: Bearer <token>
-```
-
 #### Редактирование изображения
 ```
-POST /api/gemini-editor/edit
-Headers: Authorization: Bearer <token>
+POST /api/image
 Body: {
-  "prompt": "Удали фон с изображения",
-  "image_url": "data:image/jpeg;base64,...",
-  "style": "natural",
-  "strength": "moderate"
+  "prompt": "Удали фон с изображения, natural and realistic appearance, moderate changes, balanced modification",
+  "image": "data:image/jpeg;base64,..."
 }
 ```
 
-#### Списание баланса
-```
-POST /api/balance/deduct
-Body: {
-  "user_id": 123,
-  "amount": 10,
-  "description": "Gemini Image Editor usage"
-}
-```
+## Интеграция с существующим API
 
-## Интеграция с Laravel Backend
+Проект использует существующий Gemini 2.0 Flash API endpoint для:
 
-Проект интегрирован с существующим Laravel backend (ai-processor), который предоставляет:
-
-- Управление балансом пользователей
-- Авторизацию через JWT токены
-- API для обработки изображений
-- Систему биллинга
+- Прямой обработки изображений через Gemini API
+- Поддержка инструкций на русском языке
+- Автоматическое улучшение промптов для лучшего качества
+- Мгновенная обработка без сложной инфраструктуры
 
   try {
     const response = await model.generateContent(contents);

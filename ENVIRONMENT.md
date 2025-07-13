@@ -7,16 +7,6 @@
 ```env
 # Gemini API Key для генерации изображений
 GEMINI_API_KEY=your_gemini_api_key_here
-
-# Конфигурация Laravel Backend
-LARAVEL_API_URL=http://localhost:8000
-BOT_TOKEN=your_bot_token_here
-
-# Конфигурация Next.js
-NEXTAUTH_URL=http://localhost:3000
-
-# Настройки Gemini Editor
-GEMINI_EDITOR_COST=10
 ```
 
 ## Описание переменных
@@ -26,25 +16,7 @@ GEMINI_EDITOR_COST=10
 - **Описание**: API ключ для доступа к Gemini 2.0 Flash API
 - **Где получить**: https://ai.google.dev/gemini-api/docs/api-key
 
-### `LARAVEL_API_URL`
-- **Обязательная**: Да
-- **Описание**: URL вашего Laravel backend сервера
-- **По умолчанию**: `http://localhost:8000`
-
-### `BOT_TOKEN`
-- **Обязательная**: Да
-- **Описание**: Приватный токен для доступа к bot API endpoints Laravel backend
-- **Где получить**: Настраивается в Laravel приложении
-
-### `NEXTAUTH_URL`
-- **Обязательная**: Да
-- **Описание**: URL вашего Next.js приложения
-- **По умолчанию**: `http://localhost:3000`
-
-### `GEMINI_EDITOR_COST`
-- **Обязательная**: Нет
-- **Описание**: Стоимость одного редактирования изображения в токенах
-- **По умолчанию**: `10`
+Больше переменных окружения не требуется! Приложение работает напрямую с Gemini API.
 
 ## Настройка для разработки
 
