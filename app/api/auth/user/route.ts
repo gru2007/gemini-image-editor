@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       try {
         const errorData = await response.json();
         errorMessage = errorData.message || errorMessage;
-      } catch (parseError) {
+      } catch {
         // If JSON parsing fails, it might be HTML (like a 404 page)
         const errorText = await response.text();
         console.error("Non-JSON error response:", errorText.substring(0, 200));
