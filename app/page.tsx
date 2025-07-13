@@ -25,7 +25,6 @@ export default function GeminiEditor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editHistory, setEditHistory] = useState<EditHistory[]>([]);
-  const [currentFile, setCurrentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
 
@@ -40,7 +39,6 @@ export default function GeminiEditor() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setCurrentFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setCurrentImage(e.target?.result as string);
@@ -59,7 +57,6 @@ export default function GeminiEditor() {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
-      setCurrentFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setCurrentImage(e.target?.result as string);
@@ -220,7 +217,6 @@ export default function GeminiEditor() {
     setResultImage(null);
     setEditInstructions("");
     setError(null);
-    setCurrentFile(null);
     setEditHistory([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
