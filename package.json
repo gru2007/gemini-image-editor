@@ -6,7 +6,7 @@
             "no-unused-vars": 0,
             "@typescript-eslint/no-unused-vars": 0
         }
-    }
+    },
     "private": true,
     "scripts": {
         "dev": "next dev --turbopack",
