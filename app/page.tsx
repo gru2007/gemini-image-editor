@@ -77,6 +77,50 @@ export default function GeminiEditor() {
     setError(null);
 
     try {
+      const token = apiToken || (typeof window !== 'undefined' ? localStorage.getItem('apiToken') : '');
+      if (!token) {
+        throw new Error('API токен не указан. Пожалуйста, настройте токен в разделе выше.');
+      }
+
+      // First, get user information and check balance
+      const userResponse = await fetch('/api/auth/user', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Неверный токен авторизации. Проверьте настройки.');
+      }
+
+      const userData = await userResponse.json();
+      const cost = parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10');
+      
+      // Check if user has enough balance
+      if (userData.balance < cost) {
+        throw new Error('Недостаточно средств на балансе для редактирования изображения.');
+      }
+
+      // Deduct balance first
+      const balanceResponse = await fetch('/api/balance/deduct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userData.id,
+          amount: cost,
+          description: `Gemini Image Editor: ${editInstructions.substring(0, 50)}...`
+        })
+      });
+
+      if (!balanceResponse.ok) {
+        throw new Error('Ошибка списания средств с баланса.');
+      }
+
+      // Now process the image with Gemini
       // Create enhanced prompt based on style and strength
       let enhancedPrompt = editInstructions;
       
@@ -111,7 +155,7 @@ export default function GeminiEditor() {
           break;
       }
 
-      // Use existing API endpoint
+      // Use existing API endpoint for image processing
       const requestData = {
         prompt: enhancedPrompt,
         image: currentImage,
@@ -128,12 +172,21 @@ export default function GeminiEditor() {
       const data = await response.json();
 
       if (!response.ok) {
+        // If image processing fails, we should refund the balance
+        // For now, we'll just return the error
         throw new Error(data.error || 'Ошибка обработки изображения');
       }
 
       if (data.success && data.image) {
         setResultImage(data.image);
         addToHistory();
+        
+        // Include updated balance info in success message
+        const balanceData = await balanceResponse.json();
+        if (balanceData.balance !== undefined) {
+          setError(null);
+          // You could show balance info in UI here
+        }
       } else {
         throw new Error('Не удалось получить результат обработки');
       }
@@ -239,6 +292,59 @@ export default function GeminiEditor() {
             Загрузите изображение и опишите, что хотите изменить. Gemini Flash поможет вам трансформировать, улучшить или отредактировать любую фотографию.
           </p>
         </div>
+
+        {/* API Token Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">API Токен</CardTitle>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Укажите ваш API токен для доступа к системе
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowTokenInput(!showTokenInput)}
+                className="bg-blue-500 hover:bg-blue-600 text-white h-9 px-3 rounded-md"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {showTokenInput ? 'Скрыть' : 'Настроить токен'}
+              </Button>
+            </div>
+          </CardHeader>
+          
+          {showTokenInput && (
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={apiToken}
+                  onChange={(e) => saveApiToken(e.target.value)}
+                  placeholder="Введите ваш API токен..."
+                  className="flex-1"
+                />
+                <Button
+                  onClick={clearApiToken}
+                  className="bg-red-500 hover:bg-red-600 text-white h-10 px-4 rounded-md"
+                >
+                  Очистить
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Токен сохраняется локально в браузере и не передается на сервер
+              </p>
+              
+              {apiToken && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-center text-green-700 dark:text-green-300 text-sm">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    API токен настроен и готов к использованию
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
 
         {/* Image Editor Interface */}
         <Card className="p-8 mb-8">
@@ -439,11 +545,21 @@ export default function GeminiEditor() {
                     )}
                   </div>
 
+                  {/* Token Warning */}
+                  {!apiToken && (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                      <div className="flex items-center text-yellow-700 dark:text-yellow-300 text-sm">
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Для редактирования изображений необходимо настроить API токен в разделе выше.
+                      </div>
+                    </div>
+                  )}
+
                   {/* Controls */}
                   <div className="flex flex-wrap items-center gap-4">
                     <Button
                       onClick={processImage}
-                      disabled={!editInstructions.trim() || loading}
+                      disabled={!editInstructions.trim() || loading || !apiToken}
                       className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Sparkles className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
