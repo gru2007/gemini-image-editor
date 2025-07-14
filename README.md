@@ -72,6 +72,10 @@ NEXT_PUBLIC_GEMINI_EDITOR_COST=10.0
 
 Подробную документацию по переменным окружения см. в [ENVIRONMENT.md](./ENVIRONMENT.md).
 
+### Автоматическая авторизация
+
+Система поддерживает автоматическую авторизацию пользователей через специальные ссылки. Подробную документацию см. в [AUTO_LOGIN.md](./AUTO_LOGIN.md).
+
 ### 4. Запуск проекта
 ```bash
 npm run dev
@@ -106,6 +110,23 @@ Response: {
   "user": { "id": 123, "name": "User", "balance": 90.0 }
 }
 ```
+
+#### Генерация ссылки автоматической авторизации
+```
+POST /api/auth/generate-link
+Body: { "token": "user_token" }
+Response: { 
+  "success": true, 
+  "link": "http://localhost:3000/auth/login?token=user_token",
+  "user": { "id": 123, "name": "User", "email": "user@example.com", "balance": 90.0 }
+}
+```
+
+#### Автоматическая авторизация через URL
+```
+GET /auth/login?token=user_token
+```
+Пользователь переходит по ссылке и автоматически авторизуется, затем перенаправляется на главную страницу.
 
 ## Интеграция с Laravel Backend
 
