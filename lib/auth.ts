@@ -38,10 +38,10 @@ export async function authenticateUser(token: string): Promise<AuthResponse> {
   }
 }
 
-// Validate token directly
+// Validate token directly (same as authenticate but returns different format)
 export async function validateToken(token: string): Promise<TokenValidationResponse> {
   try {
-    const response = await fetch('/api/auth/validate-token', {
+    const response = await fetch('/api/auth/user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -60,7 +60,13 @@ export async function validateToken(token: string): Promise<TokenValidationRespo
       };
     }
 
-    return data;
+    // Convert from AuthResponse to TokenValidationResponse format
+    return {
+      valid: data.success,
+      message: data.message || 'Token is valid',
+      user: data.user,
+      token_info: data.token_info,
+    };
   } catch (error) {
     return {
       valid: false,

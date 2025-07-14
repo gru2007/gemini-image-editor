@@ -4,7 +4,7 @@ import { HistoryItem, HistoryPart } from "@/lib/types";
 
 // Initialize the Google Gen AI client with your API key
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const LARAVEL_API_URL = process.env.LARAVEL_API_URL || "http://localhost:8000";
+const LARAVEL_API_URL = process.env.LARAVEL_API_URL || "https://api.chatall.ru";
 const BOT_TOKEN = process.env.BOT_TOKEN || "";
 const GEMINI_EDITOR_COST = parseFloat(process.env.GEMINI_EDITOR_COST || "10");
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate user token
+    // Validate user token directly with Laravel backend
     const tokenValidationResponse = await fetch(`${LARAVEL_API_URL}/api/v1/bot/validate-token`, {
       method: "POST",
       headers: {
@@ -81,12 +81,25 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ token })
     });
 
+    console.log(`Token validation request to: ${LARAVEL_API_URL}/api/v1/bot/validate-token`);
+    console.log(`Token validation response status: ${tokenValidationResponse.status}`);
+
     if (!tokenValidationResponse.ok) {
-      const errorData = await tokenValidationResponse.json();
-      return NextResponse.json(
-        { success: false, error: errorData.message || "Invalid token" },
-        { status: 401 }
-      );
+      const contentType = tokenValidationResponse.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await tokenValidationResponse.json();
+        return NextResponse.json(
+          { success: false, error: errorData.message || "Invalid token" },
+          { status: 401 }
+        );
+      } else {
+        const errorText = await tokenValidationResponse.text();
+        console.error("Non-JSON response from token validation:", errorText.substring(0, 200));
+        return NextResponse.json(
+          { success: false, error: "Token validation failed" },
+          { status: 401 }
+        );
+      }
     }
 
     const tokenData = await tokenValidationResponse.json();
@@ -123,12 +136,25 @@ export async function POST(req: NextRequest) {
       })
     });
 
+    console.log(`Balance deduction request to: ${LARAVEL_API_URL}/api/v1/bot/users/${user.id}/balance`);
+    console.log(`Balance deduction response status: ${balanceResponse.status}`);
+
     if (!balanceResponse.ok) {
-      const errorData = await balanceResponse.json();
-      return NextResponse.json(
-        { success: false, error: errorData.message || "Failed to deduct balance" },
-        { status: 500 }
-      );
+      const contentType = balanceResponse.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await balanceResponse.json();
+        return NextResponse.json(
+          { success: false, error: errorData.message || "Failed to deduct balance" },
+          { status: 500 }
+        );
+      } else {
+        const errorText = await balanceResponse.text();
+        console.error("Non-JSON response from balance deduction:", errorText.substring(0, 200));
+        return NextResponse.json(
+          { success: false, error: "Balance deduction failed" },
+          { status: 500 }
+        );
+      }
     }
 
     const balanceData = await balanceResponse.json();

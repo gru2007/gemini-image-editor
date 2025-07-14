@@ -28,9 +28,8 @@
 - **Обработка изображений**: Отправка запросов к внутреннему API
 
 ### Backend API Routes
-- **`/api/auth/validate-token`**: Проверка токенов пользователей
-- **`/api/auth/user`**: Авторизация пользователей
-- **`/api/image`**: Обработка изображений с встроенной проверкой баланса
+- **`/api/auth/user`**: Единый endpoint для авторизации и валидации токенов
+- **`/api/image`**: Обработка изображений с встроенной проверкой баланса и токенов
 
 ### Laravel Backend
 - **Авторизация**: JWT токены и валидация пользователей
@@ -63,7 +62,7 @@ npm install
 GEMINI_API_KEY=your_gemini_api_key_here
 
 # Конфигурация Laravel Backend
-LARAVEL_API_URL=http://localhost:8000
+LARAVEL_API_URL=https://api.chatall.ru
 BOT_TOKEN=your_bot_token_here
 
 # Настройки стоимости редактирования
@@ -90,13 +89,6 @@ npm run dev
 POST /api/auth/user
 Body: { "token": "user_token" }
 Response: { "success": true, "user": {...}, "token_info": {...} }
-```
-
-#### Валидация токена
-```
-POST /api/auth/validate-token
-Body: { "token": "user_token" }
-Response: { "valid": true, "user": {...}, "token_info": {...} }
 ```
 
 #### Редактирование изображения (с встроенной проверкой и списанием)
@@ -215,6 +207,24 @@ function MyComponent() {
   );
 }
 ```
+
+## Отладка
+
+### Проблемы с JSON
+
+Если вы получаете ошибку "Unexpected token '<', "<!DOCTYPE "... is not valid JSON", это означает что Laravel API возвращает HTML вместо JSON. 
+
+Проверьте:
+1. Правильность `LARAVEL_API_URL` в `.env.local`
+2. Валидность `BOT_TOKEN`
+3. Доступность Laravel API
+
+### Логирование
+
+API включает подробное логирование для отладки:
+- Запросы к Laravel API
+- Статусы ответов
+- Ошибки парсинга JSON
 
 ## Деплой
 
