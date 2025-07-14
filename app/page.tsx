@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Sparkles, Download, RefreshCw, Moon, Sun, ChevronDown, ChevronUp } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 interface EditHistory {
   instruction: string;
@@ -27,10 +28,13 @@ export default function GeminiEditor() {
   const [editHistory, setEditHistory] = useState<EditHistory[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
+  
+  // Use the new auth system
+  const { user, isAuthenticated, login, logout, balance, isLoading: authLoading } = useAuth();
 
   // Load token from localStorage on mount
   useEffect(() => {
-    const savedToken = localStorage.getItem('apiToken');
+    const savedToken = localStorage.getItem('auth_token');
     if (savedToken) {
       setApiToken(savedToken);
     }
@@ -67,57 +71,44 @@ export default function GeminiEditor() {
     }
   };
 
+  const handleTokenLogin = async () => {
+    if (!apiToken.trim()) {
+      setError('Введите токен для авторизации');
+      return;
+    }
+
+    const success = await login(apiToken);
+    if (!success) {
+      setError('Неверный токен авторизации');
+    } else {
+      setError(null);
+      setShowTokenInput(false);
+    }
+  };
+
   const processImage = async () => {
     if (!currentImage || !editInstructions.trim()) return;
+
+    if (!isAuthenticated || !user) {
+      setError('Необходимо авторизоваться для редактирования изображений');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const token = apiToken || (typeof window !== 'undefined' ? localStorage.getItem('apiToken') : '');
+      const token = localStorage.getItem('auth_token');
       if (!token) {
-        throw new Error('API токен не указан. Пожалуйста, настройте токен в разделе выше.');
+        throw new Error('API токен не найден. Пожалуйста, авторизуйтесь заново.');
       }
 
-      // First, get user information and check balance
-      const userResponse = await fetch('/api/auth/user', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!userResponse.ok) {
-        throw new Error('Неверный токен авторизации. Проверьте настройки.');
-      }
-
-      const userData = await userResponse.json();
-      const cost = parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10');
-      
       // Check if user has enough balance
-      if (userData.balance < cost) {
+      const cost = parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10');
+      if (balance < cost) {
         throw new Error('Недостаточно средств на балансе для редактирования изображения.');
       }
 
-      // Deduct balance first
-      const balanceResponse = await fetch('/api/balance/deduct', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userData.id,
-          amount: cost,
-          description: `Gemini Image Editor: ${editInstructions.substring(0, 50)}...`
-        })
-      });
-
-      if (!balanceResponse.ok) {
-        throw new Error('Ошибка списания средств с баланса.');
-      }
-
-      // Now process the image with Gemini
       // Create enhanced prompt based on style and strength
       let enhancedPrompt = editInstructions;
       
@@ -152,10 +143,11 @@ export default function GeminiEditor() {
           break;
       }
 
-      // Use existing API endpoint for image processing
+      // Process image with Gemini API (now includes auth and balance deduction)
       const requestData = {
         prompt: enhancedPrompt,
         image: currentImage,
+        token: token, // Send token for server-side validation
       };
 
       const response = await fetch('/api/image', {
@@ -169,8 +161,6 @@ export default function GeminiEditor() {
       const data = await response.json();
 
       if (!response.ok) {
-        // If image processing fails, we should refund the balance
-        // For now, we'll just return the error
         throw new Error(data.error || 'Ошибка обработки изображения');
       }
 
@@ -178,11 +168,10 @@ export default function GeminiEditor() {
         setResultImage(data.image);
         addToHistory();
         
-        // Include updated balance info in success message
-        const balanceData = await balanceResponse.json();
-        if (balanceData.balance !== undefined) {
-          setError(null);
-          // You could show balance info in UI here
+        // Update user balance from response
+        if (data.balance !== undefined) {
+          // The balance is already updated in the auth hook
+          // We could trigger a refresh here if needed
         }
       } else {
         throw new Error('Не удалось получить результат обработки');
@@ -225,16 +214,11 @@ export default function GeminiEditor() {
 
   const saveApiToken = (token: string) => {
     setApiToken(token);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('apiToken', token);
-    }
   };
 
   const clearApiToken = () => {
     setApiToken("");
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('apiToken');
-    }
+    logout();
   };
 
   const quickActions = [
@@ -263,6 +247,22 @@ export default function GeminiEditor() {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* User Info */}
+              {isAuthenticated && user && (
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Баланс: {balance.toFixed(2)}</p>
+                  </div>
+                  <Button
+                    onClick={logout}
+                    className="bg-red-500 hover:bg-red-600 text-white text-xs h-8 px-3 rounded-md"
+                  >
+                    Выйти
+                  </Button>
+                </div>
+              )}
+              
               <Button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -289,58 +289,53 @@ export default function GeminiEditor() {
           </p>
         </div>
 
-        {/* API Token Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">API Токен</CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Укажите ваш API токен для доступа к системе
-                </p>
-              </div>
-              <Button
-                onClick={() => setShowTokenInput(!showTokenInput)}
-                className="bg-blue-500 hover:bg-blue-600 text-white h-9 px-3 rounded-md"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {showTokenInput ? 'Скрыть' : 'Настроить токен'}
-              </Button>
-            </div>
-          </CardHeader>
-          
-          {showTokenInput && (
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  type="password"
-                  value={apiToken}
-                  onChange={(e) => saveApiToken(e.target.value)}
-                  placeholder="Введите ваш API токен..."
-                  className="flex-1"
-                />
+        {/* Authentication Section */}
+        {!isAuthenticated && (
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Авторизация</CardTitle>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Введите ваш API токен для доступа к системе
+                  </p>
+                </div>
                 <Button
-                  onClick={clearApiToken}
-                  className="bg-red-500 hover:bg-red-600 text-white h-10 px-4 rounded-md"
+                  onClick={() => setShowTokenInput(!showTokenInput)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white h-9 px-3 rounded-md"
                 >
-                  Очистить
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {showTokenInput ? 'Скрыть' : 'Войти'}
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Токен сохраняется локально в браузере и не передается на сервер
-              </p>
-              
-              {apiToken && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <div className="flex items-center text-green-700 dark:text-green-300 text-sm">
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    API токен настроен и готов к использованию
-                  </div>
+            </CardHeader>
+            
+            {showTokenInput && (
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    value={apiToken}
+                    onChange={(e) => saveApiToken(e.target.value)}
+                    placeholder="Введите ваш API токен..."
+                    className="flex-1"
+                    onKeyPress={(e) => e.key === 'Enter' && handleTokenLogin()}
+                  />
+                  <Button
+                    onClick={handleTokenLogin}
+                    disabled={authLoading}
+                    className="bg-green-500 hover:bg-green-600 text-white h-10 px-4 rounded-md"
+                  >
+                    {authLoading ? 'Проверка...' : 'Войти'}
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          )}
-        </Card>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Токен проверяется на сервере и сохраняется локально для удобства
+                </p>
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         {/* Image Editor Interface */}
         <Card className="p-8 mb-8">
@@ -541,12 +536,22 @@ export default function GeminiEditor() {
                     )}
                   </div>
 
-                  {/* Token Warning */}
-                  {!apiToken && (
+                  {/* Auth Warning */}
+                  {!isAuthenticated && (
                     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                       <div className="flex items-center text-yellow-700 dark:text-yellow-300 text-sm">
                         <Sparkles className="w-4 h-4 mr-2" />
-                        Для редактирования изображений необходимо настроить API токен в разделе выше.
+                        Для редактирования изображений необходимо авторизоваться.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Balance Warning */}
+                  {isAuthenticated && balance < parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10') && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                      <div className="flex items-center text-red-700 dark:text-red-300 text-sm">
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Недостаточно средств на балансе для редактирования изображений. Текущий баланс: {balance.toFixed(2)}
                       </div>
                     </div>
                   )}
@@ -555,7 +560,7 @@ export default function GeminiEditor() {
                   <div className="flex flex-wrap items-center gap-4">
                     <Button
                       onClick={processImage}
-                      disabled={!editInstructions.trim() || loading || !apiToken}
+                      disabled={!editInstructions.trim() || loading || !isAuthenticated || balance < parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10')}
                       className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Sparkles className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -694,10 +699,10 @@ export default function GeminiEditor() {
                 <Sparkles className="text-white w-6 h-6" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                История изменений
+                Безопасность
               </h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Сохраняйте и возвращайтесь к предыдущим версиям редактирования
+                Проверка баланса и списание происходит на сервере, защищено от мошенничества
               </p>
             </CardContent>
           </Card>

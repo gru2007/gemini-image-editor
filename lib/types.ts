@@ -19,3 +19,33 @@ export interface HistoryPart {
 // 1. User messages can contain both text and images (as inlineData)
 // 2. Model messages should only contain text parts
 // 3. Images in history are stored as data URLs in our app, but converted to base64 for the API
+
+// Token validation API types
+export interface TokenValidationRequest {
+  token: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  balance: number;
+  telegram_id: string | null;
+  is_active: boolean;
+  email_verified_at: string | null;
+}
+
+export interface TokenInfo {
+  id: number;
+  name: string;
+  abilities: string[];
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface TokenValidationResponse {
+  valid: boolean;
+  message: string;
+  user: User | null;
+  token_info: TokenInfo | null;
+}

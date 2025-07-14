@@ -1,64 +1,70 @@
-# Настройка переменных окружения
+# Environment Variables
 
-Для корректной работы проекта необходимо настроить следующие переменные окружения в файле `.env.local`:
+This application requires several environment variables to be configured. Create a `.env.local` file in the root directory with the following variables:
 
-## Основные переменные
+## Required Variables
 
-```env
-# Gemini API Key для генерации изображений
+### Gemini API Configuration
+```
 GEMINI_API_KEY=your_gemini_api_key_here
+```
+- Get this from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-# Конфигурация Laravel Backend
+### Laravel Backend Configuration
+```
 LARAVEL_API_URL=http://localhost:8000
 BOT_TOKEN=your_bot_token_here
+```
+- `LARAVEL_API_URL`: URL of your Laravel backend API
+- `BOT_TOKEN`: Bot token for server-to-server authentication with Laravel
 
-# Конфигурация Next.js
-NEXTAUTH_URL=http://localhost:3000
+### Image Editor Configuration
+```
+GEMINI_EDITOR_COST=10.0
+NEXT_PUBLIC_GEMINI_EDITOR_COST=10.0
+```
+- Cost in credits for each image editing operation
+- `NEXT_PUBLIC_GEMINI_EDITOR_COST`: Client-side cost display
+- `GEMINI_EDITOR_COST`: Server-side cost for actual billing
 
-# Настройки Gemini Editor
-NEXT_PUBLIC_GEMINI_EDITOR_COST=10
+### Optional Variables
+```
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+- Base URL of your Next.js application
+
+## Security Notes
+
+1. **Never commit `.env.local` to version control**
+2. **Bot token is used for server-to-server authentication only**
+3. **User tokens are validated on the server before processing**
+4. **Balance checking and deduction happens on the server**
+
+## Laravel API Endpoints Required
+
+Your Laravel backend must implement these endpoints:
+
+### Token Validation
+```
+POST /api/v1/bot/validate-token
+Authorization: Bearer {BOT_TOKEN}
+Body: { "token": "user_token" }
 ```
 
-## Описание переменных
+### Balance Deduction
+```
+POST /api/v1/bot/users/{user_id}/balance
+Authorization: Bearer {BOT_TOKEN}
+Body: { "amount": 10.0, "type": "debit", "description": "..." }
+```
 
-### `GEMINI_API_KEY`
-- **Обязательная**: Да
-- **Описание**: API ключ для доступа к Gemini 2.0 Flash API
-- **Где получить**: https://ai.google.dev/gemini-api/docs/api-key
+## Environment Setup
 
-### `LARAVEL_API_URL`
-- **Обязательная**: Да
-- **Описание**: URL вашего Laravel backend сервера
-- **По умолчанию**: `http://localhost:8000`
+1. Copy `.env.example` to `.env.local`
+2. Fill in all required variables
+3. Restart your development server
+4. Test the authentication flow
 
-### `BOT_TOKEN`
-- **Обязательная**: Да
-- **Описание**: Приватный токен для доступа к bot API endpoints Laravel backend
-- **Где получить**: Настраивается в Laravel приложении
+## Production Deployment
 
-### `NEXTAUTH_URL`
-- **Обязательная**: Да
-- **Описание**: URL вашего Next.js приложения
-- **По умолчанию**: `http://localhost:3000`
-
-### `NEXT_PUBLIC_GEMINI_EDITOR_COST`
-- **Обязательная**: Нет
-- **Описание**: Стоимость одного редактирования изображения в токенах
-- **По умолчанию**: `10`
-
-## Настройка для разработки
-
-1. Создайте файл `.env.local` в корне проекта
-2. Скопируйте приведенные выше переменные
-3. Заполните необходимые значения
-4. Перезапустите сервер разработки
-
-## Настройка для продакшена
-
-В продакшене убедитесь, что все переменные окружения настроены в вашем hosting provider или через переменные среды сервера.
-
-## Безопасность
-
-- Никогда не коммитьте `.env.local` файл в репозиторий
-- Используйте надежные API ключи
-- Регулярно ротируйте токены и ключи доступа 
+For production deployment, ensure all environment variables are properly configured in your hosting platform (Vercel, Netlify, etc.). 

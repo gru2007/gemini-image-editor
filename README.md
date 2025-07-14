@@ -5,26 +5,42 @@
 ## Основные возможности
 
 - **Редактирование изображений с ИИ**: Используйте Gemini 2.0 Flash для мгновенного редактирования изображений
-- **Интеграция с биллингом**: Автоматическое списание средств с баланса пользователя
-- **Авторизация пользователей**: Проверка токенов через Laravel backend
+- **Безопасная система биллинга**: Автоматическое списание средств происходит на сервере
+- **Токенная авторизация**: Проверка токенов через Laravel backend с валидацией на сервере
 - **Современный дизайн**: Адаптивный интерфейс с поддержкой темной/светлой темы
 - **История изменений**: Сохранение и возврат к предыдущим версиям редактирования
+- **Защита от мошенничества**: Все операции с балансом происходят на сервере
 
 ## Как это работает
 
-1. **Авторизация**: Пользователь вводит токен от основного сайта
+1. **Авторизация**: Пользователь вводит токен, который проверяется на сервере
 2. **Проверка баланса**: Система проверяет достаточность средств на балансе
 3. **Загрузка изображения**: Поддержка drag & drop, форматы PNG, JPG, WEBP
-4. **Списание средств**: Автоматическое списание стоимости обработки
+4. **Безопасное списание**: Автоматическое списание стоимости обработки на сервере
 5. **Редактирование**: Описание изменений на русском языке с улучшением промпта
 6. **Результат**: Мгновенная обработка через Gemini 2.0 Flash и скачивание
 
-## Архитектура
+## Архитектура системы
 
-- **Frontend**: Next.js с Tailwind CSS и shadcn/ui
-- **Backend**: Laravel (ai-processor) с системой управления балансом
-- **ИИ**: Google Gemini 2.0 Flash API
-- **Авторизация**: JWT токены через Laravel backend
+### Frontend (Next.js)
+- **Интерфейс**: Современный React UI с Tailwind CSS
+- **Аутентификация**: React хук для управления состоянием пользователя
+- **Обработка изображений**: Отправка запросов к внутреннему API
+
+### Backend API Routes
+- **`/api/auth/validate-token`**: Проверка токенов пользователей
+- **`/api/auth/user`**: Авторизация пользователей
+- **`/api/image`**: Обработка изображений с встроенной проверкой баланса
+
+### Laravel Backend
+- **Авторизация**: JWT токены и валидация пользователей
+- **Биллинг**: Управление балансом пользователей
+- **API**: Bot endpoints для серверного взаимодействия
+
+### Система безопасности
+- **Токенная авторизация**: Проверка токенов на каждый запрос
+- **Серверное списание**: Невозможность обхода системы оплаты
+- **Валидация баланса**: Проверка средств перед обработкой
 
 ## Установка и настройка
 
@@ -50,12 +66,12 @@ GEMINI_API_KEY=your_gemini_api_key_here
 LARAVEL_API_URL=http://localhost:8000
 BOT_TOKEN=your_bot_token_here
 
-# Конфигурация Next.js
-NEXTAUTH_URL=http://localhost:3000
-
-# Настройки Gemini Editor
-NEXT_PUBLIC_GEMINI_EDITOR_COST=10
+# Настройки стоимости редактирования
+GEMINI_EDITOR_COST=10.0
+NEXT_PUBLIC_GEMINI_EDITOR_COST=10.0
 ```
+
+Подробную документацию по переменным окружения см. в [ENVIRONMENT.md](./ENVIRONMENT.md).
 
 ### 4. Запуск проекта
 ```bash
@@ -71,128 +87,151 @@ npm run dev
 
 #### Авторизация пользователя
 ```
-GET /api/auth/user
-Headers: Authorization: Bearer <token>
+POST /api/auth/user
+Body: { "token": "user_token" }
+Response: { "success": true, "user": {...}, "token_info": {...} }
 ```
 
-#### Списание баланса
+#### Валидация токена
 ```
-POST /api/balance/deduct
-Body: {
-  "user_id": 123,
-  "amount": 10,
-  "description": "Gemini Image Editor usage"
-}
+POST /api/auth/validate-token
+Body: { "token": "user_token" }
+Response: { "valid": true, "user": {...}, "token_info": {...} }
 ```
 
-#### Редактирование изображения
+#### Редактирование изображения (с встроенной проверкой и списанием)
 ```
 POST /api/image
 Body: {
-  "prompt": "Удали фон с изображения, natural and realistic appearance, moderate changes, balanced modification",
-  "image": "data:image/jpeg;base64,..."
+  "prompt": "Удали фон с изображения",
+  "image": "data:image/jpeg;base64,...",
+  "token": "user_token"
+}
+Response: { 
+  "success": true, 
+  "image": "data:image/jpeg;base64,...",
+  "balance": 90.0,
+  "user": { "id": 123, "name": "User", "balance": 90.0 }
 }
 ```
 
 ## Интеграция с Laravel Backend
 
-Проект интегрирован с существующим Laravel backend (ai-processor), который предоставляет:
+Проект интегрирован с существующим Laravel backend, который предоставляет:
 
-- Управление балансом пользователей через BotUserController
-- Авторизацию через JWT токены
-- Систему биллинга с автоматическим списанием средств
-- Обработку изображений выполняется напрямую через Gemini API
+### Требуемые endpoints:
 
-  try {
-    const response = await model.generateContent(contents);
-    for (const part of response.response.candidates[0].content.parts) {
-      // Based on the part type, either show the text or save the image
-      if (part.text) {
-        console.log(part.text);
-      } else if (part.inlineData) {
-        const imageData = part.inlineData.data;
-        const buffer = Buffer.from(imageData, "base64");
-        fs.writeFileSync("gemini-native-image.png", buffer);
-        console.log("Image saved as gemini-native-image.png");
-      }
-    }
-  } catch (error) {
-    console.error("Error generating content:", error);
+#### Валидация токена
+```
+POST /api/v1/bot/validate-token
+Authorization: Bearer {BOT_TOKEN}
+Body: { "token": "user_token" }
+Response: {
+  "valid": true,
+  "user": {
+    "id": 123,
+    "name": "User Name",
+    "email": "user@example.com",
+    "balance": 100.0,
+    "telegram_id": null,
+    "is_active": true,
+    "email_verified_at": "2023-01-01T00:00:00Z"
+  },
+  "token_info": {
+    "id": 456,
+    "name": "API Token",
+    "abilities": ["*"],
+    "created_at": "2023-01-01T00:00:00Z",
+    "last_used_at": "2023-01-01T12:00:00Z"
   }
 }
 ```
 
-## Features
-
-- 🎨 Text-to-image generation with Gemini 2.0 Flash
-- 🖌️ Image editing through natural language instructions
-- 💬 Conversation history for context-aware image refinements
-- 📱 Responsive UI built with Next.js and shadcn/ui
-- 🔄 Seamless workflow between creation and editing modes
-- ⚡ Uses Gemini 2.0 Flash Javascript SDK
-
-## Getting Started
-
-### Local Development
-
-First, set up your environment variables:
-
-```bash
-cp .env.example .env
+#### Списание баланса
+```
+POST /api/v1/bot/users/{user_id}/balance
+Authorization: Bearer {BOT_TOKEN}
+Body: {
+  "amount": 10.0,
+  "type": "debit",
+  "description": "Gemini Image Editor: описание операции"
+}
+Response: { "balance": 90.0 }
 ```
 
-Add your Google AI Studio API key to the `.env` file:
+## Безопасность
 
-_Get your `GEMINI_API_KEY` key [here](https://ai.google.dev/gemini-api/docs/api-key)._
+### Серверная проверка
+- Все токены проверяются на сервере перед обработкой
+- Баланс проверяется и списывается только на сервере
+- Невозможность обхода системы оплаты через клиент
 
+### Защита от мошенничества
+- Bot token используется только для серверного взаимодействия
+- Пользовательские токены не передаются в открытом виде
+- Вся логика биллинга изолирована на сервере
+
+## Технологии
+
+- **Frontend**: Next.js 15, React 19, Tailwind CSS
+- **UI Components**: shadcn/ui, Radix UI
+- **ИИ**: Google Gemini 2.0 Flash API
+- **Авторизация**: JWT токены через Laravel backend
+- **Состояние**: React hooks для управления аутентификацией
+
+## React Hook для аутентификации
+
+```typescript
+import { useAuth } from '@/lib/hooks/useAuth';
+
+function MyComponent() {
+  const { 
+    user, 
+    isAuthenticated, 
+    balance, 
+    login, 
+    logout 
+  } = useAuth();
+
+  const handleLogin = async () => {
+    const success = await login('user-token');
+    if (success) {
+      console.log('Авторизация успешна');
+    }
+  };
+
+  return (
+    <div>
+      {isAuthenticated ? (
+        <div>
+          <p>Привет, {user.name}!</p>
+          <p>Баланс: {balance}</p>
+          <button onClick={logout}>Выйти</button>
+        </div>
+      ) : (
+        <button onClick={handleLogin}>Войти</button>
+      )}
+    </div>
+  );
+}
 ```
-GEMINI_API_KEY=your_google_api_key
-```
 
-Then, install dependencies and run the development server:
-
-```bash
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
-
-## Deployment
+## Деплой
 
 ### Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgoogle-gemini%2Fgemini-image-editing-nextjs-quickstart&env=GEMINI_API_KEY&envDescription=Create%20an%20account%20and%20generate%20an%20API%20key&envLink=https%3A%2F%2Faistudio.google.com%2Fapp%2Fu%2F0%2Fapikey&demo-url=https%3A%2F%2Fhuggingface.co%2Fspaces%2Fphilschmid%2Fimage-generation-editing)
+1. Загрузите проект на Vercel
+2. Настройте переменные окружения
+3. Убедитесь, что Laravel backend доступен
 
 ### Docker
-
-1. Build the Docker image:
-
 ```bash
-docker build -t nextjs-gemini-image-editing .
+# Сборка образа
+docker build -t gemini-image-editor .
+
+# Запуск контейнера
+docker run -p 3000:3000 --env-file .env gemini-image-editor
 ```
 
-2. Run the container with your Google API key:
+## Лицензия
 
-```bash
-docker run -p 3000:3000 -e GEMINI_API_KEY=your_google_api_key nextjs-gemini-image-editing
-```
-
-Or using an environment file:
-
-```bash
-# Run container with env file
-docker run -p 3000:3000 --env-file .env nextjs-gemini-image-editing
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
-
-## Technologies Used
-
-- [Next.js](https://nextjs.org/) - React framework for the web application
-- [Google Gemini 2.0 Flash](https://deepmind.google/technologies/gemini/) - AI model for image generation and editing
-- [shadcn/ui](https://ui.shadcn.com/) - Re-usable components built using Radix UI and Tailwind CSS
-
-## License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](./LICENSE) file for details.
+Этот проект лицензирован под Apache License 2.0 - смотрите [LICENSE](./LICENSE) файл для деталей.

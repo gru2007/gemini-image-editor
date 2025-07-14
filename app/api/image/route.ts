@@ -4,6 +4,10 @@ import { HistoryItem, HistoryPart } from "@/lib/types";
 
 // Initialize the Google Gen AI client with your API key
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const LARAVEL_API_URL = process.env.LARAVEL_API_URL || "http://localhost:8000";
+const BOT_TOKEN = process.env.BOT_TOKEN || "";
+const GEMINI_EDITOR_COST = parseFloat(process.env.GEMINI_EDITOR_COST || "10");
+
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // Define the model ID for Gemini 2.0 Flash experimental
@@ -29,6 +33,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!BOT_TOKEN) {
+      console.error("BOT_TOKEN is not configured");
+      return NextResponse.json(
+        { success: false, error: "Bot token not configured" },
+        { status: 500 }
+      );
+    }
+
     // Parse JSON request
     const requestData = await req.json().catch((err) => {
       console.error("Failed to parse JSON body:", err);
@@ -42,7 +54,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { prompt, image: inputImage, history } = requestData;
+    const { prompt, image: inputImage, history, token } = requestData;
 
     if (!prompt) {
       return NextResponse.json(
@@ -50,6 +62,76 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: "Authorization token is required" },
+        { status: 401 }
+      );
+    }
+
+    // Validate user token
+    const tokenValidationResponse = await fetch(`${LARAVEL_API_URL}/api/v1/bot/validate-token`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${BOT_TOKEN}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({ token })
+    });
+
+    if (!tokenValidationResponse.ok) {
+      const errorData = await tokenValidationResponse.json();
+      return NextResponse.json(
+        { success: false, error: errorData.message || "Invalid token" },
+        { status: 401 }
+      );
+    }
+
+    const tokenData = await tokenValidationResponse.json();
+
+    if (!tokenData.valid || !tokenData.user) {
+      return NextResponse.json(
+        { success: false, error: tokenData.message || "Invalid token" },
+        { status: 401 }
+      );
+    }
+
+    const user = tokenData.user;
+
+    // Check if user has sufficient balance
+    if (user.balance < GEMINI_EDITOR_COST) {
+      return NextResponse.json(
+        { success: false, error: "Insufficient balance for image processing" },
+        { status: 402 }
+      );
+    }
+
+    // Deduct balance before processing
+    const balanceResponse = await fetch(`${LARAVEL_API_URL}/api/v1/bot/users/${user.id}/balance`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${BOT_TOKEN}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        amount: GEMINI_EDITOR_COST,
+        type: "debit",
+        description: `Gemini Image Editor: ${prompt.substring(0, 50)}...`
+      })
+    });
+
+    if (!balanceResponse.ok) {
+      const errorData = await balanceResponse.json();
+      return NextResponse.json(
+        { success: false, error: errorData.message || "Failed to deduct balance" },
+        { status: 500 }
+      );
+    }
+
+    const balanceData = await balanceResponse.json();
 
     let response;
 
@@ -223,11 +305,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Return the base64 image and description as JSON
+    // Return the base64 image and description as JSON, along with updated balance
     return NextResponse.json({
       success: true,
       image: `data:${mimeType};base64,${imageData}`,
-      description: textResponse || null
+      description: textResponse || null,
+      balance: balanceData.balance,
+      user: {
+        id: user.id,
+        name: user.name,
+        balance: balanceData.balance
+      }
     });
   } catch (error) {
     console.error("Error generating image:", error);
