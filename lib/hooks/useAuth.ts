@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { authenticateUser, isUserAuthenticated, getUserBalance } from '../auth';
 import type { User, TokenInfo } from '../types';
+import { parseBalance } from '../types';
 
 export interface AuthState {
   user: User | null;
@@ -46,7 +47,7 @@ export function useAuth(): AuthState & AuthActions {
           token_info: response.token_info || null,
           isAuthenticated: true,
           isLoading: false,
-          balance: response.user!.balance,
+          balance: parseBalance(response.user!.balance), // Convert to number
           error: null,
         }));
         
@@ -92,7 +93,7 @@ export function useAuth(): AuthState & AuthActions {
 
   // Check current balance
   const checkBalance = (): number => {
-    return getUserBalance(state.user);
+    return state.balance;
   };
 
   // Check if user has enough balance

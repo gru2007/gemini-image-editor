@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Upload, Sparkles, Download, RefreshCw, Moon, Sun, ChevronDown, ChevronUp } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { parseBalance } from "@/lib/types";
 
 interface EditHistory {
   instruction: string;
@@ -31,6 +32,10 @@ export default function GeminiEditor() {
   
   // Use the new auth system
   const { user, isAuthenticated, login, logout, balance, isLoading: authLoading } = useAuth();
+
+  // Safe balance display
+  const displayBalance = parseBalance(balance);
+  const geminiCost = parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10');
 
   // Load token from localStorage on mount
   useEffect(() => {
@@ -104,8 +109,7 @@ export default function GeminiEditor() {
       }
 
       // Check if user has enough balance
-      const cost = parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10');
-      if (balance < cost) {
+      if (displayBalance < geminiCost) {
         throw new Error('Недостаточно средств на балансе для редактирования изображения.');
       }
 
@@ -252,7 +256,7 @@ export default function GeminiEditor() {
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Баланс: {balance.toFixed(2)}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Баланс: {displayBalance.toFixed(2)}</p>
                   </div>
                   <Button
                     onClick={logout}
@@ -547,11 +551,11 @@ export default function GeminiEditor() {
                   )}
 
                   {/* Balance Warning */}
-                  {isAuthenticated && balance < parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10') && (
+                  {isAuthenticated && displayBalance < geminiCost && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                       <div className="flex items-center text-red-700 dark:text-red-300 text-sm">
                         <Sparkles className="w-4 h-4 mr-2" />
-                        Недостаточно средств на балансе для редактирования изображений. Текущий баланс: {balance.toFixed(2)}
+                        Недостаточно средств на балансе для редактирования изображений. Текущий баланс: {displayBalance.toFixed(2)}
                       </div>
                     </div>
                   )}
@@ -560,7 +564,7 @@ export default function GeminiEditor() {
                   <div className="flex flex-wrap items-center gap-4">
                     <Button
                       onClick={processImage}
-                      disabled={!editInstructions.trim() || loading || !isAuthenticated || balance < parseFloat(process.env.NEXT_PUBLIC_GEMINI_EDITOR_COST || '10')}
+                      disabled={!editInstructions.trim() || loading || !isAuthenticated || displayBalance < geminiCost}
                       className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Sparkles className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

@@ -1,4 +1,5 @@
 import type { User, TokenInfo, TokenValidationResponse } from "./types";
+import { parseBalance } from "./types";
 
 // Authentication response interface
 export interface AuthResponse {
@@ -82,9 +83,10 @@ export function isUserAuthenticated(user: User | null): boolean {
   return user !== null && user.is_active;
 }
 
-// Get user balance
+// Get user balance as number
 export function getUserBalance(user: User | null): number {
-  return user?.balance || 0;
+  if (!user) return 0;
+  return parseBalance(user.balance);
 }
 
 // Check if user has sufficient balance
