@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Deduct balance before processing
-    const balanceResponse = await fetch(`${LARAVEL_API_URL}/api/v1/bot/users/${user.id}/balance`, {
+    const balanceResponse = await fetch(`${LARAVEL_API_URL}/api/v1/bot/user/${user.id}/balance`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${BOT_TOKEN}`,
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
       })
     });
 
-    console.log(`Balance deduction request to: ${LARAVEL_API_URL}/api/v1/bot/users/${user.id}/balance`);
+    console.log(`Balance deduction request to: ${LARAVEL_API_URL}/api/v1/bot/user/${user.id}/balance`);
     console.log(`Balance deduction response status: ${balanceResponse.status}`);
 
     if (!balanceResponse.ok) {
