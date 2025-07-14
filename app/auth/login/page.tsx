@@ -9,13 +9,19 @@ import { Sparkles, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 function AutoLoginContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const [hasTriedLogin, setHasTriedLogin] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
 
   useEffect(() => {
+    // Prevent multiple API calls
+    if (hasTriedLogin) return;
+
     const performAutoLogin = async () => {
       try {
+        setHasTriedLogin(true); // Mark that we've tried to login
+        
         // Get token from URL parameters
         const token = searchParams.get('token');
         
@@ -56,7 +62,7 @@ function AutoLoginContent() {
     };
 
     performAutoLogin();
-  }, [searchParams, login, router]);
+  }, [searchParams, login, router, hasTriedLogin]);
 
   const getStatusIcon = () => {
     switch (status) {
