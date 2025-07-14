@@ -36,7 +36,12 @@ function AutoLoginContent() {
           
           // Redirect to main page after 2 seconds
           setTimeout(() => {
-            router.push('/');
+            try {
+              router.push('/');
+            } catch (error) {
+              // Fallback to window.location if router fails
+              window.location.href = '/';
+            }
           }, 2000);
         } else {
           setStatus('error');
@@ -101,7 +106,23 @@ function AutoLoginContent() {
           {/* Additional Info */}
           <div className="text-sm text-gray-600 dark:text-gray-400">
             {status === 'loading' && 'Пожалуйста, подождите...'}
-            {status === 'success' && 'Вы будете перенаправлены автоматически.'}
+            {status === 'success' && (
+              <div className="space-y-2">
+                <p>Вы будете перенаправлены автоматически.</p>
+                <button
+                  onClick={() => {
+                    try {
+                      router.push('/');
+                    } catch (error) {
+                      window.location.href = '/';
+                    }
+                  }}
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline text-sm"
+                >
+                  Перейти сейчас →
+                </button>
+              </div>
+            )}
             {status === 'error' && (
               <div className="space-y-2">
                 <p>Что можно сделать:</p>
@@ -114,14 +135,38 @@ function AutoLoginContent() {
             )}
           </div>
           
-          {/* Manual redirect button for errors */}
+          {/* Manual redirect buttons for errors */}
           {status === 'error' && (
-            <button
-              onClick={() => router.push('/')}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Перейти на главную страницу
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  try {
+                    if (window.history.length > 1) {
+                      window.history.back();
+                    } else {
+                      window.location.href = '/';
+                    }
+                  } catch (error) {
+                    window.location.href = '/';
+                  }
+                }}
+                className="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                ← Назад
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    router.push('/');
+                  } catch (error) {
+                    window.location.href = '/';
+                  }
+                }}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Перейти на главную страницу
+              </button>
+            </div>
           )}
         </CardContent>
       </Card>
