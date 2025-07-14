@@ -291,34 +291,47 @@ export async function POST(req: NextRequest) {
     let mimeType = "image/png";
 
     // Process the response
+    console.log("Full Gemini API response:", JSON.stringify(response, null, 2));
+    
     if (response.candidates && response.candidates.length > 0) {
-      const parts = response.candidates[0].content.parts;
-      console.log("Number of parts in response:", parts.length);
+      const candidate = response.candidates[0];
+      console.log("Candidate structure:", JSON.stringify(candidate, null, 2));
+      
+      if (candidate && candidate.content && candidate.content.parts) {
+        const parts = candidate.content.parts;
+        console.log("Number of parts in response:", parts.length);
 
-      for (const part of parts) {
-        if ("inlineData" in part && part.inlineData) {
-          // Get the image data
-          imageData = part.inlineData.data;
-          mimeType = part.inlineData.mimeType || "image/png";
-          console.log(
-            "Image data received, length:",
-            imageData?.length || 0,
-            "MIME type:",
-            mimeType
-          );
-        } else if ("text" in part && part.text) {
-          // Store the text
-          textResponse = part.text;
-          console.log(
-            "Text response received:",
-            textResponse.substring(0, 50) + "..."
-          );
+        for (const part of parts) {
+          if ("inlineData" in part && part.inlineData) {
+            // Get the image data
+            imageData = part.inlineData.data;
+            mimeType = part.inlineData.mimeType || "image/png";
+            console.log(
+              "Image data received, length:",
+              imageData?.length || 0,
+              "MIME type:",
+              mimeType
+            );
+          } else if ("text" in part && part.text) {
+            // Store the text
+            textResponse = part.text;
+            console.log(
+              "Text response received:",
+              textResponse.substring(0, 50) + "..."
+            );
+          }
         }
+      } else {
+        console.error("Invalid candidate structure:", candidate);
+        return NextResponse.json(
+          { success: false, error: "Invalid response structure from Gemini API" },
+          { status: 500 }
+        );
       }
     } else {
-      console.error("No response from Gemini API", { response });
+      console.error("No candidates in Gemini API response", { response });
       return NextResponse.json(
-        { success: false, error: "No response from Gemini API" },
+        { success: false, error: "No candidates in Gemini API response" },
         { status: 500 }
       );
     }
