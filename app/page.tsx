@@ -205,6 +205,24 @@ export default function GeminiEditor() {
     }
   };
 
+  const continueEditing = () => {
+    if (resultImage) {
+      setCurrentImage(resultImage);
+      setResultImage(null);
+      setEditInstructions("");
+      setError(null);
+    }
+  };
+
+  const loadFromHistory = (historyItem: EditHistory) => {
+    if (historyItem.result) {
+      setCurrentImage(historyItem.result);
+      setResultImage(null);
+      setEditInstructions("");
+      setError(null);
+    }
+  };
+
   const resetEditor = () => {
     setCurrentImage(null);
     setResultImage(null);
@@ -450,12 +468,22 @@ export default function GeminiEditor() {
                           alt="Result"
                           className="w-full max-h-96 object-contain rounded-lg border border-gray-200 dark:border-gray-600"
                         />
-                        <Button
-                          onClick={downloadResult}
-                          className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white h-9 px-3 rounded-md"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
+                        <div className="absolute top-2 right-2 flex gap-2">
+                          <Button
+                            onClick={continueEditing}
+                            className="bg-green-500 hover:bg-green-600 text-white h-9 px-3 rounded-md"
+                            title="Продолжить редактирование этого изображения"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            onClick={downloadResult}
+                            className="bg-blue-500 hover:bg-blue-600 text-white h-9 px-3 rounded-md"
+                            title="Скачать результат"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -608,13 +636,23 @@ export default function GeminiEditor() {
                           <Sparkles className="w-4 h-4 mr-2" />
                           Изображение успешно обработано!
                         </div>
-                        <Button
-                          onClick={downloadResult}
-                          className="border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-700 dark:text-green-300 h-8 px-3 rounded-md"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Скачать
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={continueEditing}
+                            className="bg-green-500 hover:bg-green-600 text-white h-8 px-3 rounded-md"
+                            title="Продолжить редактирование этого изображения"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Продолжить
+                          </Button>
+                          <Button
+                            onClick={downloadResult}
+                            className="border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-700 dark:text-green-300 h-8 px-3 rounded-md"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Скачать
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -626,23 +664,50 @@ export default function GeminiEditor() {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                       История изменений
                     </h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
                       {editHistory.map((edit, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          {/* Preview thumbnail */}
+                          {edit.result && (
+                            <div className="flex-shrink-0">
+                              <img
+                                src={edit.result}
+                                alt={`Result ${index + 1}`}
+                                className="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                               {edit.instruction}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {edit.timestamp}
                             </p>
                           </div>
-                          <Button
-                            onClick={() => setEditInstructions(edit.instruction)}
-                            className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs h-8 px-2 rounded-md"
-                          >
-                            Применить
-                          </Button>
+                          
+                          {/* Actions */}
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => setEditInstructions(edit.instruction)}
+                              className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs h-8 px-2 rounded-md"
+                              title="Применить эту инструкцию"
+                            >
+                              Инструкция
+                            </Button>
+                            {edit.result && (
+                              <Button
+                                onClick={() => loadFromHistory(edit)}
+                                className="bg-green-500 hover:bg-green-600 text-white text-xs h-8 px-2 rounded-md"
+                                title="Загрузить этот результат для дальнейшего редактирования"
+                              >
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Загрузить
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
