@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
-export default function AutoLogin() {
+function AutoLoginContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const router = useRouter();
@@ -126,5 +126,41 @@ export default function AutoLogin() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-900 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="text-white w-8 h-8" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+            Gemini Image Editor
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent className="text-center space-y-6">
+          <div className="flex justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+          <div className="text-lg font-medium text-blue-600 dark:text-blue-400">
+            Загрузка...
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function AutoLogin() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AutoLoginContent />
+    </Suspense>
   );
 } 
