@@ -283,16 +283,13 @@ export async function POST(req: NextRequest) {
           topP: 0.95,
           topK: 40,
           responseModalities: ["Text", "Image"],
-          httpOptions: {
-            baseUrl: 'https://api.cometapi.com'
-          }
         },
       });
     } catch (error) {
       console.error("Error in chat.sendMessage:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error in AI processing";
       return NextResponse.json(
-        { success: false, error: "CometAPI/Gemini API error", details: errorMessage },
+        { success: false, error: "Gemini API error", details: errorMessage },
         { status: 500 }
       );
     }
@@ -302,7 +299,7 @@ export async function POST(req: NextRequest) {
     let mimeType = "image/png";
 
     // Process the response
-    console.log("Full CometAPI/Gemini API response:", JSON.stringify(response, null, 2));
+    console.log("Full Gemini API response:", JSON.stringify(response, null, 2));
     
     if (response.candidates && response.candidates.length > 0) {
       const candidate = response.candidates[0];
@@ -335,14 +332,14 @@ export async function POST(req: NextRequest) {
       } else {
         console.error("Invalid candidate structure:", candidate);
         return NextResponse.json(
-          { success: false, error: "Invalid response structure from CometAPI/Gemini API" },
+          { success: false, error: "Invalid response structure from Gemini API" },
           { status: 500 }
         );
       }
     } else {
       console.error("No candidates in Gemini API response", { response });
       return NextResponse.json(
-        { success: false, error: "No candidates in CometAPI/Gemini API response" },
+        { success: false, error: "No candidates in Gemini API response" },
         { status: 500 }
       );
     }
@@ -350,7 +347,7 @@ export async function POST(req: NextRequest) {
     if (!imageData) {
       console.error("No image data in Gemini response", { response });
       return NextResponse.json(
-        { success: false, error: "No image data in CometAPI/Gemini response" },
+        { success: false, error: "No image data in Gemini response" },
         { status: 500 }
       );
     }
