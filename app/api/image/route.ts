@@ -121,8 +121,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Deduct balance before processing
-    const balanceResponse = await fetch(`${LARAVEL_API_URL}/api/v1/bot/user/${user.id}/balance`, {
+    // Deduct balance before processing using the new debit endpoint
+    const balanceResponse = await fetch(`${LARAVEL_API_URL}/api/v1/bot/users/${user.id}/debit`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${BOT_TOKEN}`,
@@ -131,12 +131,20 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         amount: GEMINI_EDITOR_COST,
-        type: "debit",
-        description: `Gemini Image Editor: ${prompt.substring(0, 50)}...`
+        description: `Gemini Image Editor: ${prompt.substring(0, 50)}...`,
+        api_name: "gemini-image-editor",
+        model_handling: "for gemini-2.0-flash-exp-image-generation",
+        metadata: {
+          model: "gemini-2.0-flash-exp-image-generation",
+          request_id: `img_${Date.now()}`,
+          session_id: `sess_${user.id}_${Date.now()}`,
+          ip_address: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
+          user_agent: req.headers.get("user-agent") || "unknown"
+        }
       })
     });
 
-    console.log(`Balance deduction request to: ${LARAVEL_API_URL}/api/v1/bot/user/${user.id}/balance`);
+    console.log(`Balance deduction request to: ${LARAVEL_API_URL}/api/v1/bot/users/${user.id}/debit`);
     console.log(`Balance deduction response status: ${balanceResponse.status}`);
 
     if (!balanceResponse.ok) {
